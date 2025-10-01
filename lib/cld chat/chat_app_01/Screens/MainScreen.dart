@@ -31,7 +31,13 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context, chatService, _) {
         // ✅ When opening a chat, show only ChatScreen (full screen)
         if (chatService.currentChatId != null) {
-          return ChatScreen(); // ChatScreen has its own Scaffold
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatScreen(),
+            ),
+          );
+// ChatScreen has its own Scaffold
         }
 
         // ✅ Otherwise, show the regular tab layout
