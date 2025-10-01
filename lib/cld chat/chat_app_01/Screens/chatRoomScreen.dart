@@ -23,7 +23,7 @@ class ChatRoomsScreen extends StatelessWidget {
                           ? Icons.group
                           : Icons.person),
                     ),
-                    title: Text(chatRoom['name'] ?? 'Direct Chat'),
+                    title: Text('${chatRoom['profiles']['display_name']}'?? 'Direct Chat'),
                     subtitle: Text(
                       'Created by ${chatRoom['profiles']['display_name']}',
                     ),

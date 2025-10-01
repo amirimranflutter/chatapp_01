@@ -12,6 +12,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
   final _emailController = TextEditingController();
   String _searchQuery = "";
 
+
   @override
   void initState() {
     super.initState();
