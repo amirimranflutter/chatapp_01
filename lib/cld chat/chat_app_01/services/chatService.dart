@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -14,8 +12,11 @@ class ChatService extends ChangeNotifier {
   String? _currentChatId;
 
   List<Map<String, dynamic>> get contacts => _contacts;
+
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
+
   List<Map<String, dynamic>> get messages => _messages;
+
   String? get currentChatId => _currentChatId;
 
   void setCurrentChat(String chatId) {
@@ -29,7 +30,9 @@ class ChatService extends ChangeNotifier {
     try {
       final response = await _supabase
           .from('contacts')
-          .select('id, contact_id, profile:profiles!inner(id,display_name, avatar_url, email)')
+          .select(
+            'id, contact_id, profile:profiles!inner(id,display_name, avatar_url, email)',
+          )
           .eq('user_id', currentUserId);
       // print("response --->>>$response");
       _contacts = List<Map<String, dynamic>>.from(response as List);
@@ -41,25 +44,67 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-
-
-
+  // Future<void> loadChatRooms() async {
+  //   final currentUserId = _supabase.auth.currentUser?.id;
+  //   if (currentUserId == null) return;
+  //
+  //   final response = await _supabase
+  //       .from('chat_participants')
+  //       .select('''
+  //         chat_rooms (
+  //           id, name, type, created_at, created_by,
+  //           profiles!chat_rooms_created_by_fkey (display_name)
+  //         )
+  //       ''')
+  //       .eq('user_id', currentUserId);
+  //   _chatRooms = response
+  //       .map<Map<String, dynamic>>((item) => item['chat_rooms'] as Map<String, dynamic>)
+  //       .toList();
+  //   notifyListeners();
+  //
+  // }
   Future<void> loadChatRooms() async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return;
-
     final response = await _supabase
-        .from('chat_participants')
+        .from('chat_rooms')
         .select('''
-          chat_rooms (
-            id, name, type, created_at, created_by,
-            profiles!chat_rooms_created_by_fkey (display_name)
-          )
-        ''')
-        .eq('user_id', currentUserId);
-    _chatRooms = response
-        .map<Map<String, dynamic>>((item) => item['chat_rooms'] as Map<String, dynamic>)
-        .toList();
+    id,name,type,created_at,
+    participants:chat_participants(
+    user_id,
+    profiles(display_name,avatar_url)),
+    messages(content,created_at)
+    
+    ''')
+        .order('created_at', ascending: false);
+    _chatRooms = [];  // clear before adding
+
+    for (var room in response) {
+      // ✅ Get other user (receiver)
+      final participants = room['participants'] as List;
+      final others = participants
+          .where((p) => p['user_id'] != currentUserId)
+          .toList();
+
+      final otherUser =
+      others.isNotEmpty ? others.first['profiles']['display_name'] : 'Unknown';
+
+      // ✅ Get last message
+      final messages = room['messages'] as List?;
+      final lastMessage = (messages != null && messages.isNotEmpty)
+          ? messages.last['content']
+          : 'No messages yet';
+
+      _chatRooms.add({
+        'id': room['id'],
+        'type': room['type'], // 'direct' or 'group'
+        'name': room['name'], // group chat name if exists
+        'created_at': room['created_at'],
+        'otherUser': otherUser,   // ✅ use in UI
+        'lastMessage': lastMessage,  // ✅ use in UI
+      });
+    }
+
     notifyListeners();
 
   }
@@ -81,18 +126,18 @@ class ChatService extends ChangeNotifier {
     _supabase
         .channel('messages:$chatId')
         .onPostgresChanges(
-      event: PostgresChangeEvent.insert,
-      schema: 'public',
-      table: 'messages',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'chat_id',
-        value: chatId,
-      ),
-      callback: (payload) {
-        _handleNewMessage(payload.newRecord);
-      },
-    )
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'chat_id',
+            value: chatId,
+          ),
+          callback: (payload) {
+            _handleNewMessage(payload.newRecord);
+          },
+        )
         .subscribe();
   }
 
@@ -133,7 +178,10 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  Future<String?> createChatRoom(String name, List<String> participantIds) async {
+  Future<String?> createChatRoom(
+    String name,
+    List<String> participantIds,
+  ) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return 'Not authenticated';
 
@@ -150,11 +198,15 @@ class ChatService extends ChangeNotifier {
       });
 
       // Add participants
-      final participants = participantIds.map((id) => {
-        'chat_id': chatId,
-        'user_id': id,
-        'joined_at': DateTime.now().toIso8601String(),
-      }).toList();
+      final participants = participantIds
+          .map(
+            (id) => {
+              'chat_id': chatId,
+              'user_id': id,
+              'joined_at': DateTime.now().toIso8601String(),
+            },
+          )
+          .toList();
 
       // Add creator as participant
       participants.add({
@@ -256,6 +308,7 @@ class ChatService extends ChangeNotifier {
       return e.toString();
     }
   }
+
   Future<Map<String, dynamic>?> getReceiverProfile(String chatId) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return null;
@@ -268,8 +321,9 @@ class ChatService extends ChangeNotifier {
           .eq('chat_id', chatId);
 
       // Find the receiver (not the current user)
-      final receiverId = participants
-          .firstWhere((p) => p['user_id'] != currentUserId)['user_id'];
+      final receiverId = participants.firstWhere(
+        (p) => p['user_id'] != currentUserId,
+      )['user_id'];
 
       // Get the receiver's profile
       final profile = await _supabase
@@ -284,4 +338,36 @@ class ChatService extends ChangeNotifier {
       return null;
     }
   }
+  Future<String?> deleteChatRoom(String chatId) async {
+    try {
+      // 1. Delete messages first (if you don’t have cascading delete in DB)
+      await _supabase
+          .from('messages')
+          .delete()
+          .eq('chat_id', chatId);
+
+      // 2. Delete participants
+      await _supabase
+          .from('chat_participants')
+          .delete()
+          .eq('chat_id', chatId);
+
+      // 3. Delete the chat room
+      await _supabase
+          .from('chat_rooms')
+          .delete()
+          .eq('id', chatId);
+
+      // 4. Update UI
+      _chatRooms.removeWhere((room) => room['id'] == chatId);
+      _messages.clear();
+      _currentChatId = null;
+
+      notifyListeners();
+      return null; // success
+    } catch (e) {
+      return e.toString(); // return error
+    }
+  }
+
 }
