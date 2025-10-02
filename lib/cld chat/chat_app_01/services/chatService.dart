@@ -1,4 +1,6 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -6,12 +8,13 @@ class ChatService extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
   final _uuid = Uuid();
 
-  List<Map<String, dynamic>> _contacts = [];
+
   List<Map<String, dynamic>> _chatRooms = [];
   List<Map<String, dynamic>> _messages = [];
   String? _currentChatId;
+  final ContactService contactService=ContactService();
 
-  List<Map<String, dynamic>> get contacts => _contacts;
+
 
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
 
@@ -19,77 +22,49 @@ class ChatService extends ChangeNotifier {
 
   String? get currentChatId => _currentChatId;
 
+
   void setCurrentChat(String chatId) {
     _currentChatId = chatId;
     _loadMessages(chatId);
   }
 
-  Future<List<Map<String, dynamic>>> loadContacts() async {
-    final currentUserId = _supabase.auth.currentUser?.id;
-    if (currentUserId == null) return [];
-    try {
-      final response = await _supabase
-          .from('contacts')
-          .select(
-            'id, contact_id, profile:profiles!inner(id,display_name, avatar_url, email)',
-          )
-          .eq('user_id', currentUserId);
-      // print("response --->>>$response");
-      _contacts = List<Map<String, dynamic>>.from(response as List);
-      notifyListeners();
-      return _contacts;
-    } catch (e) {
-      print('Exception: $e');
-      return [];
-    }
-  }
 
-  // Future<void> loadChatRooms() async {
-  //   final currentUserId = _supabase.auth.currentUser?.id;
-  //   if (currentUserId == null) return;
-  //
-  //   final response = await _supabase
-  //       .from('chat_participants')
-  //       .select('''
-  //         chat_rooms (
-  //           id, name, type, created_at, created_by,
-  //           profiles!chat_rooms_created_by_fkey (display_name)
-  //         )
-  //       ''')
-  //       .eq('user_id', currentUserId);
-  //   _chatRooms = response
-  //       .map<Map<String, dynamic>>((item) => item['chat_rooms'] as Map<String, dynamic>)
-  //       .toList();
-  //   notifyListeners();
-  //
-  // }
+
   Future<void> loadChatRooms() async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return;
-    final response = await _supabase
-        .from('chat_rooms')
-        .select('''
-    id,name,type,created_at,
-    participants:chat_participants(
-    user_id,
-    profiles(display_name,avatar_url)),
-    messages(content,created_at)
-    
-    ''')
-        .order('created_at', ascending: false);
-    _chatRooms = [];  // clear before adding
 
-    for (var room in response) {
-      // ✅ Get other user (receiver)
+    final response = await _supabase
+        .from('chat_participants')
+        .select('''
+        chat_rooms (
+          id,
+          name,
+          type,
+          created_at,
+          participants:chat_participants (
+            user_id,
+            profiles(display_name, avatar_url)
+          ),
+          messages(content, created_at)
+        )
+      ''')
+        .eq('user_id', currentUserId);
+
+
+    _chatRooms = [];
+
+    for (var item in response) {
+      final room = item['chat_rooms'];
       final participants = room['participants'] as List;
       final others = participants
           .where((p) => p['user_id'] != currentUserId)
           .toList();
 
-      final otherUser =
-      others.isNotEmpty ? others.first['profiles']['display_name'] : 'Unknown';
+      final otherUser = others.isNotEmpty
+          ? others.first['profiles']['display_name']
+          : 'Unknown';
 
-      // ✅ Get last message
       final messages = room['messages'] as List?;
       final lastMessage = (messages != null && messages.isNotEmpty)
           ? messages.last['content']
@@ -97,17 +72,17 @@ class ChatService extends ChangeNotifier {
 
       _chatRooms.add({
         'id': room['id'],
-        'type': room['type'], // 'direct' or 'group'
-        'name': room['name'], // group chat name if exists
+        'type': room['type'],
+        'name': room['name'],
         'created_at': room['created_at'],
-        'otherUser': otherUser,   // ✅ use in UI
-        'lastMessage': lastMessage,  // ✅ use in UI
+        'otherUser': otherUser,
+        'lastMessage': lastMessage,
       });
     }
 
     notifyListeners();
-
   }
+
 
   Future<void> _loadMessages(String chatId) async {
     final response = await _supabase
@@ -157,7 +132,9 @@ class ChatService extends ChangeNotifier {
   }
 
   Future<String?> sendMessage(String content) async {
-    if (_currentChatId == null) return 'No chat selected';
+    if (_currentChatId == null || _currentChatId!.isEmpty) {
+      return 'No chat selected';
+    }
 
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return 'Not authenticated';
@@ -245,7 +222,7 @@ class ChatService extends ChangeNotifier {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      loadContacts();
+      contactService.loadContacts();
       return null;
     } catch (e) {
       return e.toString();
@@ -369,5 +346,7 @@ class ChatService extends ChangeNotifier {
       return e.toString(); // return error
     }
   }
+
+
 
 }
