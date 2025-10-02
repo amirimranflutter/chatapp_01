@@ -1,3 +1,4 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +21,8 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final chatService = Provider.of<ChatService>(context, listen: false);
-      chatService.loadContacts();
+      final contactService = Provider.of<ContactService>(context, listen: false);
+      contactService.loadContacts();
       chatService.loadChatRooms();
     });
   }
