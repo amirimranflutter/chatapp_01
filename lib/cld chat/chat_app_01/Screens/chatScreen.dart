@@ -79,49 +79,37 @@ class _ChatScreenState extends State<ChatScreen> {
     }
       return Scaffold(
         appBar: AppBar(
-          leadingWidth: 100,
+
           // 👈 Increase this if needed
-          leading: _receiverProfile != null
-              ? Row(
-            mainAxisSize: MainAxisSize.min,
-            // 👈 Prevent Row from taking full width
-            children: [
-              IconButton(
-                onPressed: () {
-                  final chatService = Provider.of<ChatService>(
-                    context,
-                    listen: false,
-                  );
-                  // or '' if you're using empty string
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => MainScreen()),
-                        (route) => false,
-                  );
-                },
-                icon: Icon(Icons.arrow_back),
-              ),
-              CircleAvatar(
-                radius: 16,
-                // 👈 Smaller radius (32px total, fits in leading area)
-                backgroundImage: _receiverProfile!['avatar_url'] != null
-                    ? NetworkImage(_receiverProfile!['avatar_url'])
-                    : null,
-                child: _receiverProfile!['avatar_url'] == null
-                    ? Text(
-                  _receiverProfile!['display_name'][0].toUpperCase(),
-                  style: TextStyle(fontSize: 12),
-                )
-                    : null,
-              ),
-            ],
-          )
-              : IconButton(
-            icon: Icon(Icons.arrow_back),
+          leadingWidth: 120,
+          leading: IconButton(
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.arrow_back),
+                if (_receiverProfile != null)
+                  Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundImage: _receiverProfile!['avatar_url'] != null
+                          ? NetworkImage(_receiverProfile!['avatar_url'])
+                          : null,
+                      child: _receiverProfile!['avatar_url'] == null
+                          ? Text(
+                        _receiverProfile!['display_name'][0].toUpperCase(),
+                        style: TextStyle(fontSize: 12),
+                      )
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
             onPressed: () {
               Navigator.pop(context);
             },
           ),
+
           title: Text(_receiverProfile?['display_name'] ?? 'Chat'),
 
           actions: [
