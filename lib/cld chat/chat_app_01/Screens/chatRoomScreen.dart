@@ -23,9 +23,13 @@ class ChatRoomsScreen extends StatelessWidget {
                           ? Icons.group
                           : Icons.person),
                     ),
-                    title: Text('${chatRoom['profiles']['display_name']}'?? 'Direct Chat'),
+                    title: Text(
+                      chatRoom['type'] == 'direct'
+                          ? chatRoom['otherUser']   // ✅ instead of "Direct Chat"
+                          : (chatRoom['name'] ?? 'Group Chat'),
+                    ),
                     subtitle: Text(
-                      'Created by ${chatRoom['profiles']['display_name']}',
+                      chatRoom['lastMessage'],  // ✅ instead of "Created by..."
                     ),
                     trailing: Text(
                       DateFormat('MMM dd').format(
@@ -40,6 +44,7 @@ class ChatRoomsScreen extends StatelessWidget {
                       );
                     },
                   );
+
                 },
               ),
             ),
