@@ -1,3 +1,4 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -32,8 +33,8 @@ class _CreateChatRoomScreenState extends State<CreateChatRoomScreen> {
           ),
         ],
       ),
-      body: Consumer<ChatService>(
-        builder: (context, chatService, _) {
+      body: Consumer2<ChatService,ContactService>(
+        builder: (context, chatService, contactService,_) {
           return Column(
             children: [
               Padding(
@@ -61,9 +62,9 @@ class _CreateChatRoomScreenState extends State<CreateChatRoomScreen> {
               ),
               Expanded(
                 child: ListView.builder(
-                  itemCount: chatService.contacts.length,
+                  itemCount: contactService.contacts.length,
                   itemBuilder: (context, index) {
-                    final contact = chatService.contacts[index];
+                    final contact = contactService.contacts[index];
                     final profile = contact['profiles'];
                     final contactId = profile['id'];
                     final isSelected = _selectedContacts.contains(contactId);
