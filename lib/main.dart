@@ -8,6 +8,7 @@ import 'cld chat/chat_app_01/Screens/MainScreen.dart';
 import 'cld chat/chat_app_01/Screens/authScreen.dart';
 import 'cld chat/chat_app_01/auth/authService.dart';
 import 'cld chat/chat_app_01/services/chatService.dart';
+import 'cld chat/chat_app_01/services/contactService.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ Widget build(BuildContext context) {
     providers: [
       ChangeNotifierProvider(create: (_) => AuthService()),
       ChangeNotifierProvider(create: (_) => ChatService()),
+      ChangeNotifierProvider(create: (_) => ContactService()),
     ],
     child: MaterialApp(
       title: 'Flutter Chat',
