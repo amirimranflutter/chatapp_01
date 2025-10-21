@@ -1,7 +1,9 @@
+
 import 'package:flutter/foundation.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:provider/provider.dart';
+
+import '../databaseServices/authDBService.dart';
 class AuthService extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
   User? _currentUser;
@@ -46,7 +48,14 @@ class AuthService extends ChangeNotifier {
           'created_at': DateTime.now().toIso8601String(),
         });
       }
-
+      if (response.user!= null) {
+        final hiveAuth = HiveAuthService();
+        hiveAuth.saveSession(
+          userId: response.user!.id,
+          email: response.user!.email ?? 'email',
+          token: response.session!.accessToken,
+        );
+      }
       return null;
     } catch (e) {
       return e.toString();
@@ -55,11 +64,21 @@ class AuthService extends ChangeNotifier {
 
   Future<String?> signIn(String email, String password) async {
     try {
-      await _supabase.auth.signInWithPassword(
+      print("Login press------");
+      final response =await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      return null;
+      if (response != null) {
+        final hiveAuth = HiveAuthService();
+        hiveAuth.saveSession(
+          userId: response.user!.id,
+          email: response.user!.email ?? 'email',
+          token: response.session!.accessToken,
+        );
+        print('response====>>>>>$response');
+        return null;
+      }
     } catch (e) {
       return e.toString();
     }
@@ -80,4 +99,5 @@ class AuthService extends ChangeNotifier {
 
     return response;
   }
+
 }

@@ -1,45 +1,60 @@
+// models/message_model.dart
 
-import 'package:chat_app_cld/cld%20chat/chat_app_01/models/userModel.dart';
+import 'package:uuid/uuid.dart';
 
 class MessageModel {
   final String id;
-  final String chatId;
   final String senderId;
-  final String content;
-  final String messageType;
+  final String receiverId;
+  final String text;
   final DateTime createdAt;
-  final UserModel? sender;
+  bool isSynced; // For offline support
 
   MessageModel({
     required this.id,
-    required this.chatId,
     required this.senderId,
-    required this.content,
-    this.messageType = 'text',
+    required this.receiverId,
+    required this.text,
     required this.createdAt,
-    this.sender,
+    this.isSynced = false,
   });
 
-  factory MessageModel.fromMap(Map<String, dynamic> map) {
+  /// For creating a new outgoing message
+  factory MessageModel.create({
+    required String senderId,
+    required String receiverId,
+    required String text,
+  }) {
     return MessageModel(
-      id: map['id'],
-      chatId: map['chat_id'],
-      senderId: map['sender_id'],
-      content: map['content'],
-      messageType: map['message_type'] ?? 'text',
-      createdAt: DateTime.parse(map['created_at']),
-      sender: map['profiles'] != null ? UserModel.fromMap(map['profiles']) : null,
+      id: const Uuid().v4(),
+      senderId: senderId,
+      receiverId: receiverId,
+      text: text,
+      createdAt: DateTime.now(),
+      isSynced: false,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Convert for Supabase (Map)
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'chat_id': chatId,
       'sender_id': senderId,
-      'content': content,
-      'message_type': messageType,
+      'receiver_id': receiverId,
+      'text': text,
       'created_at': createdAt.toIso8601String(),
     };
+  }
+
+  /// From Supabase (Map)
+  factory MessageModel.fromJson(Map<String, dynamic> json) {
+    return MessageModel(
+      id: json['id'],
+      senderId: json['sender_id'],
+      receiverId: json['receiver_id'],
+      text: json['text'],
+      createdAt: DateTime.parse(json['created_at']),
+      isSynced: true,
+    );
   }
 }

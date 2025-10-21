@@ -1,8 +1,8 @@
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+
 
 class ChatService extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -12,7 +12,7 @@ class ChatService extends ChangeNotifier {
   List<Map<String, dynamic>> _chatRooms = [];
   List<Map<String, dynamic>> _messages = [];
   String? _currentChatId;
-  final ContactService contactService=ContactService();
+  // final ContactService contactService=ContactService(localService: localService, remoteService: remoteService);
 
 
 
@@ -201,33 +201,7 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  Future<String?> addContact(String email) async {
-    final currentUserId = _supabase.auth.currentUser?.id;
-    if (currentUserId == null) return 'Not authenticated';
 
-    try {
-      // Find user by email
-      final userResponse = await _supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .single();
-
-      final contactId = userResponse['id'];
-
-      // Add contact
-      await _supabase.from('contacts').insert({
-        'user_id': currentUserId,
-        'contact_id': contactId,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      contactService.loadContacts();
-      return null;
-    } catch (e) {
-      return e.toString();
-    }
-  }
 
   Future<String?> createDirectChat(String contactId) async {
     final currentUserId = _supabase.auth.currentUser?.id;

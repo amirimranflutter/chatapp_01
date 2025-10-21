@@ -38,10 +38,10 @@ class ChatRoomsScreen extends StatelessWidget {
                     ),
                     onTap: () {
                       chatService.setCurrentChat(chatRoom['id']);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => ChatScreen()),
-                      );
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(builder: (_) => ChatScreen(contact: null,)),
+                      // );
                     },
                   );
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../auth/authService.dart';
+import '../databaseServices/authDBService.dart';
+import '../services/authService.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -106,12 +107,15 @@ class _AuthScreenState extends State<AuthScreen> {
         _emailController.text,
         _passwordController.text,
       );
+
+      Navigator.pushNamed(context, '/mainScreen');
     } else {
       error = await authService.signUp(
         _emailController.text,
         _passwordController.text,
         _displayNameController.text,
       );
+      Navigator.pushNamed(context, '/mainScreen');
     }
 
     setState(() {
@@ -126,4 +130,3 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 }
 
-// screens/main_screen.dart
