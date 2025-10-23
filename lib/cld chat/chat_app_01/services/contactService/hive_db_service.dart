@@ -1,3 +1,4 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/DateUtils.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/supabase_contact_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -21,7 +22,7 @@ class HiveDBService {
   Future<List<ContactModel>> getAllContacts() async {
     final box = await _openBox();
     return box.values
-        .map((e) => ContactModel.fromMap(Map<String, dynamic>.from(e)))
+        .map((e) => ContactModel.fromMap(Map<String, dynamic>.from(e))).where((c)=>c.userId==currentUserId)
         .toList();
   }
 
