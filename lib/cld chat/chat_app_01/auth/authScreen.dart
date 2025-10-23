@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../databaseServices/authDBService.dart';
-import '../services/authService.dart';
+import '../databaseServices/authService.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
