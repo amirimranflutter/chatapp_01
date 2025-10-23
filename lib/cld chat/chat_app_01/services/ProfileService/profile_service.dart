@@ -6,51 +6,51 @@ import '../../Utils/showSnackBar.dart';
 import '../../models/userModel.dart';
 import 'local_profile_repository.dart';
 import 'supabase_profile_repository.dart';
-
+//here another
 class ProfileService extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   final LocalProfileRepository _localRepo = LocalProfileRepository();
   final SupabaseProfileRepository _remoteRepo = SupabaseProfileRepository();
-
+  UserModel? _otherProfile;
   UserModel? _currentProfile;
   UserModel? get currentProfile => _currentProfile;
-
+  UserModel? get otherProfile => _otherProfile;
   bool _isSyncing = false;
   bool get isSyncing => _isSyncing;
 
   SupabaseClient get supabase => _supabase;
   String? get currentUserId => _supabase.auth.currentUser?.id;
   /// ✅ Load current user profile — prefers local first, then syncs from remote
-  Future<void> loadCurrentUserProfile(BuildContext context, {bool forceRefresh = false}) async {
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) {
-      print('⚠️ [ProfileService] User ID is null.');
+  Future<void> loadUserProfile({String? userId, bool isOtherUser = false}) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) {
+      print('⚠️ No authenticated user found');
       return;
     }
 
     try {
-      // Step 1: Try loading from local Hive
-      final localProfile = await _localRepo.getProfile(userId, context);
-      if (localProfile != null && !forceRefresh) {
-        _currentProfile = localProfile;
-        notifyListeners();
+      final targetUserId = userId ?? currentUserId;
+      final profileData = await _supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, email')
+          .eq('id', targetUserId)
+          .single();
+
+// Convert the map to UserModel
+      final userModel = UserModel.fromMap(profileData);
+
+      if (isOtherUser) {
+        _otherProfile = userModel;
+      } else {
+        _currentProfile = userModel;
       }
 
-      // Step 2: Fetch from Supabase (remote)
-      final remoteProfile = await _remoteRepo.getProfile(userId, context);
-      if (remoteProfile != null) {
-        _currentProfile = remoteProfile;
-        await _localRepo.saveProfile(remoteProfile, context); // Sync locally
-        print('✅ Profile synced from Supabase');
-        notifyListeners();
-      } else {
-        print('⚠️ No profile found on Supabase.');
-      }
+      notifyListeners();
     } catch (e) {
-      print('❌ Error loading profile: $e');
-      SnackbarService.showError(context, 'Error loading profile: $e');
+      debugPrint('❌ Error fetching profile: $e');
     }
   }
+
 
   /// ✅ Update display name locally and remotely
   Future<void> updateDisplayName(String name, BuildContext context) async {
