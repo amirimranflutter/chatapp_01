@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../databaseServices/authDBService.dart';
+import 'authDBService.dart';
 class AuthService extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
   User? _currentUser;
@@ -83,9 +83,23 @@ class AuthService extends ChangeNotifier {
       return e.toString();
     }
   }
-
   Future<void> signOut() async {
-    await _supabase.auth.signOut();
+    try {
+      // 1️⃣ Logout from Supabase
+      await _supabase.auth.signOut();
+
+      // 2️⃣ Clear local Hive session
+      final hiveAuth = HiveAuthService();
+      await hiveAuth.clearSession();
+
+      // 3️⃣ Reset current user & notify listeners
+      _currentUser = null;
+      notifyListeners();
+
+      debugPrint('✅ User successfully logged out from both Supabase and Hive');
+    } catch (e) {
+      debugPrint('❌ Error during logout: $e');
+    }
   }
 
   Future<Map<String, dynamic>?> getCurrentUserProfile() async {
