@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 class MessageModel {
   final String id;
   final String senderId;
-  final String receiverId;
+  final String chatId;
   final String text;
   final DateTime createdAt;
   bool isSynced; // For offline support
@@ -13,7 +13,7 @@ class MessageModel {
   MessageModel({
     required this.id,
     required this.senderId,
-    required this.receiverId,
+    required this.chatId,
     required this.text,
     required this.createdAt,
     this.isSynced = false,
@@ -21,14 +21,14 @@ class MessageModel {
 
   /// For creating a new outgoing message
   factory MessageModel.create({
+    required String chatId,
     required String senderId,
-    required String receiverId,
     required String text,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
       senderId: senderId,
-      receiverId: receiverId,
+      chatId: chatId,
       text: text,
       createdAt: DateTime.now(),
       isSynced: false,
@@ -40,7 +40,7 @@ class MessageModel {
     return {
       'id': id,
       'sender_id': senderId,
-      'receiver_id': receiverId,
+      'chat_id': chatId,
       'text': text,
       'created_at': createdAt.toIso8601String(),
     };
@@ -51,7 +51,7 @@ class MessageModel {
     return MessageModel(
       id: json['id'],
       senderId: json['sender_id'],
-      receiverId: json['receiver_id'],
+      chatId: json['chat_id'],
       text: json['text'],
       createdAt: DateTime.parse(json['created_at']),
       isSynced: true,
