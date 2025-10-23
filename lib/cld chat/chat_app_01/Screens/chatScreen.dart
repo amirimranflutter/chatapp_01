@@ -7,8 +7,8 @@ import '../models/contactModel.dart';
 
 class ChatScreen extends StatefulWidget {
   final ContactModel contact;
-
-  const ChatScreen({required this.contact, Key? key}) : super(key: key);
+final String chatId;
+  const ChatScreen({required this.contact,required this.chatId, Key? key}) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
