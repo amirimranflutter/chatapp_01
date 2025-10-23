@@ -23,10 +23,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// Send a new message
-  Future<void> sendMessage(String text, String contactId) async {
+  Future<void> sendMessage(String text, String chatId) async {
     final newMessage = MessageModel.create(
       senderId: currentUserId,
-      receiverId: contactId,
+      chatId: chatId,
       text: text,
     );
 
