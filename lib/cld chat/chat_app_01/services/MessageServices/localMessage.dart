@@ -5,18 +5,27 @@ import 'package:hive/hive.dart';
 class HiveMessageService {
   static const String boxName = 'messages_box';
   late Box _box;
-
-  /// Initialize Hive box
-  Future<void> init() async {
-    _box = await Hive.openBox(boxName);
+  /// Ensure box is open before use
+  Future<void> _ensureBox() async {
+    if (!Hive.isBoxOpen(boxName)) {
+      _box = await Hive.openBox(boxName);
+    } else {
+      _box = Hive.box(boxName);
+    }
   }
+
+  Future<void> init() async {
+    await _ensureBox();
+  }
+  /// Initialize Hive box
 
   /// Save a message locally (offline-safe)
   Future<void> saveMessage(MessageModel message) async {
+    await _ensureBox();
     await _box.put(message.id, {
       'id': message.id,
       'senderId': message.senderId,
-      'receiverId': message.receiverId,
+      'chat_id': message.chatId,
       'text': message.text,
       'createdAt': message.createdAt.toIso8601String(),
       'isSynced': message.isSynced,
@@ -43,7 +52,7 @@ class HiveMessageService {
       return MessageModel(
         id: m['id'],
         senderId: m['senderId'],
-        receiverId: m['receiverId'],
+        chatId: m['chatId'],
         text: m['text'],
         createdAt: DateTime.parse(m['createdAt']),
         isSynced: m['isSynced'],
@@ -62,7 +71,7 @@ class HiveMessageService {
       return MessageModel(
         id: m['id'],
         senderId: m['senderId'],
-        receiverId: m['receiverId'],
+        chatId: m['chatId'],
         text: m['text'],
         createdAt: DateTime.parse(m['createdAt']),
         isSynced: m['isSynced'],
