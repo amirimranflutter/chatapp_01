@@ -1,7 +1,4 @@
-// repository/message_repository.dart
-
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/MessageServices/remoteMessage.dart';
-
 import '../../models/messageModel.dart';
 import 'localMessage.dart';
 
@@ -20,18 +17,18 @@ class MessageRepository {
       await _local.markSynced(message.id);
     } catch (e) {
       // remains unsynced until reconnection
+      print("⚠️ Message sync failed: $e");
     }
   }
 
-  /// Load chat from local only (instant)
-  List<MessageModel> getLocalMessages(String userId, String contactId) {
-    return _local.getMessages(userId, contactId);
+  /// Load chat from local storage (async now)
+  Future<List<MessageModel>> getLocalMessages(String userId, String contactId) async {
+    return await _local.getMessages(userId, contactId);
   }
 
-  /// Force remote -> local sync (optional use)
+  /// Force remote → local sync (optional)
   Future<void> syncFromServer(String userId, String contactId) async {
-    final remoteMessages =
-    await _remote.fetchMessages(userId, contactId);
+    final remoteMessages = await _remote.fetchMessages(userId, contactId);
 
     for (final msg in remoteMessages) {
       await _local.saveMessage(msg);
@@ -40,13 +37,20 @@ class MessageRepository {
 
   /// Sync unsent messages (used when internet returns)
   Future<void> syncPending() async {
-    final unsynced = _local.getUnsyncedMessages();
+    final unsynced = await _local.getUnsyncedMessages();
 
     for (final msg in unsynced) {
       try {
         await _remote.uploadMessage(msg);
         await _local.markSynced(msg.id);
-      } catch (e) {}
+      } catch (e) {
+        print("⚠️ Failed to sync message ${msg.id}: $e");
+      }
     }
+  }
+
+  /// Fetch last message for a given chat room
+  Future<MessageModel?> fetchLastMessage(String chatId) async {
+    return await _local.fetchLastMessage(chatId);
   }
 }
