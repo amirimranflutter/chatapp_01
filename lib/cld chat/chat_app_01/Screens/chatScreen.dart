@@ -6,9 +6,9 @@ import '../Providers/chatProvider.dart';
 import '../models/contactModel.dart';
 
 class ChatScreen extends StatefulWidget {
-  final ContactModel contact;
+  final String contactName;
 final String chatId;
-  const ChatScreen({required this.contact,required this.chatId, Key? key}) : super(key: key);
+  const ChatScreen({required this.contactName,required this.chatId, Key? key}) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -22,8 +22,8 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     /// Load messages for this user-contact pair
     Future.microtask(() {
-      context.read<ChatProvider>().loadMessages(widget.contact.id);
-      print('contact->>>>> in chat screen---->>> ${widget.contact}');
+      context.read<ChatProvider>().loadMessages(widget.contactName);
+      print('contact->>>>> in chat screen---->>> ${widget.contactName}');
     });
   }
 
@@ -34,7 +34,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.contact.name ?? 'Chat'),
+        title: Text(widget.contactName ?? 'Chat'),
       ),
       body: Column(
         children: [
@@ -97,7 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       final text = _textController.text.trim();
                       if (text.isNotEmpty) {
                         await chatProvider.sendMessage(
-                            text, widget.contact.id);
+                            text, widget.chatId);
                         _textController.clear();
                       }
                     },
