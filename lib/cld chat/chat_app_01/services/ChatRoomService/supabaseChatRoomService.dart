@@ -1,46 +1,70 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseChatRoomService {
-  /// Find existing private chat room between two users
-  final supabase=Supabase.instance.client;
+  final supabase = Supabase.instance.client;
+
+  // Find existing private room between two users
   Future<Map<String, dynamic>?> findPrivateRoom(String userAId, String userBId) async {
     try {
-      final response = await supabase
-          .from('chat_rooms')
-          .select()
-          .eq('type', 'private')
-          .or('participants @> ARRAY[$userAId,$userBId]')
-          .single();
+      // Get all private rooms for userA
+      final userARooms = await supabase
+          .from('chat_room_participants')
+          .select('chat_room_id, chat_rooms!inner(id, name, type, created_at)')
+          .eq('user_id', userAId)
+          .eq('chat_rooms.type', 'private');
 
-      return response; // ✅ already a Map<String, dynamic>
+      if (userARooms.isEmpty) return null;
+
+      // Check each room to see if userB is also a participant
+      for (var room in userARooms) {
+        final chatRoomId = room['chat_room_id'];
+
+        final userBParticipant = await supabase
+            .from('chat_room_participants')
+            .select('user_id')
+            .eq('chat_room_id', chatRoomId)
+            .eq('user_id', userBId)
+            .maybeSingle();
+
+        if (userBParticipant != null) {
+          // Found existing room with both users
+          return room['chat_rooms'];
+        }
+      }
+
+      return null;
     } catch (e) {
-      // No record found or query failed
+      print('Error finding private room: $e');
       return null;
     }
   }
 
-
-
-  /// Create a new private chat room
+  // Create new private room with both users as participants
   Future<Map<String, dynamic>> createPrivateRoom(String userAId, String userBId) async {
-    final response = await supabase
-        .from('chat_rooms')
-        .insert({
-      'type': 'private',
-      'name': null, // for group only
-    })
-        .select('id')
-        .single(); // returns Map<String, dynamic>
+    try {
+      // 1. Create the chat room
+      final newRoom = await supabase
+          .from('chat_rooms')
+          .insert({'type': 'private'})
+          .select()
+          .single();
 
-    final chatId = response['id']; // ✅ no `.data`
+      final chatRoomId = newRoom['id'];
 
-    // Insert chat participants
-    await supabase.from('chat_room_participants').insert([
-      {'chat_room_id': chatId, 'user_id': userAId},
-      {'chat_room_id': chatId, 'user_id': userBId},
-    ]);
+      // 2. Add both users as participants using UPSERT to prevent duplicates
+      await supabase
+          .from('chat_room_participants')
+          .upsert([
+        {'chat_room_id': chatRoomId, 'user_id': userAId},
+        {'chat_room_id': chatRoomId, 'user_id': userBId},
+      ],
+          onConflict: 'chat_room_id,user_id',
+          ignoreDuplicates: true);
 
-    return {'id': chatId};
+      return newRoom;
+    } catch (e) {
+      print('Error creating private room: $e');
+      rethrow;
+    }
   }
-
 }
