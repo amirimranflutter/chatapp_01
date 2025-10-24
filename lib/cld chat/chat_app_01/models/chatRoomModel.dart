@@ -1,48 +1,48 @@
-import 'package:chat_app_cld/cld chat/chat_app_01/models/userModel.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/models/messageModel.dart';
 
 class ChatRoomModel {
   final String id;
+  final List<String> participantIds; // User IDs
   final String? name;
-  final String type;
-  final String createdBy; // keep this if still needed
-  final String? creatorProfileId; // ✅ NEW FIELD
+  final String type; // "private" or "group"
   final DateTime createdAt;
-  final UserModel? creator;
-  final List<UserModel> participants;
+  final MessageModel? lastMessage; // optional: latest message info
 
   ChatRoomModel({
     required this.id,
+    required this.participantIds,
     this.name,
     required this.type,
-    required this.createdBy,
-    this.creatorProfileId, // ✅ added here
     required this.createdAt,
-    this.creator,
-    this.participants = const [],
+    this.lastMessage,
   });
 
   factory ChatRoomModel.fromMap(Map<String, dynamic> map) {
+    // Parse last message if it exists
+    final lastMsgList = map['last_message'] as List?;
+
     return ChatRoomModel(
-      id: map['id'],
+      id: map['id'] ?? '',
+      participantIds: (map['participants'] as List?)
+          ?.map((p) => p['user_id'] as String)
+          .toList() ??
+          [],
       name: map['name'],
-      type: map['type'],
-      createdBy: map['created_by'], // still reading old field
-      creatorProfileId: map['creator_profile_id'], // ✅ new field
-      createdAt: DateTime.parse(map['created_at']),
-      creator: map['profiles'] != null
-          ? UserModel.fromMap(map['profiles'])
+      type: map['type'] ?? 'private',
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      lastMessage: lastMsgList != null && lastMsgList.isNotEmpty
+          ? MessageModel.fromJson(lastMsgList.first)
           : null,
     );
   }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'type': type,
-      'created_by': createdBy, // optional to keep
-      'creator_profile_id': creatorProfileId, // ✅ new field
-      'created_at': createdAt.toIso8601String(),
-    };
+  String otherParticipantName(String currentUserId) {
+    // Find the first participant that is NOT the current user
+    final otherId = participantIds.firstWhere(
+          (id) => id != currentUserId,
+      orElse: () => 'Unknown',
+    );
+    return otherId; // or fetch actual name if available in your profile map
   }
 }
+
+
