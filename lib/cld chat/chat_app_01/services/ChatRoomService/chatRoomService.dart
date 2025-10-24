@@ -1,3 +1,4 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/models/chatRoomModel.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/supabaseChatRoomService.dart';
 
 class ChatRoomService {
@@ -11,4 +12,7 @@ class ChatRoomService {
     final newRoom = await SupabaseChatRoomService().createPrivateRoom(userAId, userBId);
     return newRoom['id'];
   }
+
 }
+
+
