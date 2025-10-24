@@ -17,8 +17,8 @@ class ChatProvider extends ChangeNotifier {
   ChatProvider(this._repo, {required this.currentUserId});
 
   /// Load local messages for a specific contact
-  void loadMessages(String contactId) {
-    _messages = _repo.getLocalMessages(currentUserId, contactId);
+  void loadMessages(String contactId) async{
+    _messages = await _repo.getLocalMessages(currentUserId, contactId);
     notifyListeners();
   }
 
