@@ -1,4 +1,5 @@
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Screens/addContact.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/databaseServices/authService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/chatRoomService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,10 @@ class ContactsScreen extends StatelessWidget {
               );
             },
           ),
+          IconButton(onPressed: (){
+            AuthService().signOut();
+
+          }, icon: Icon(Icons.logout_rounded))
         ],
       ),
       body: Consumer<ContactProvider>(
@@ -51,7 +56,7 @@ class ContactsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right, color: Colors.grey),
                   // Replace `ContactModel` and `chatProvider` with your app’s types
                   onTap: () async {
-                    final contactId = contact.id;             // The profile id of the contact
+                    final contactId = contact.userId;             // The profile id of the contact
                     final currentUserId = ProfileLookupService.currentUser!.id;
 
                     // Find or create chat room
@@ -62,7 +67,7 @@ class ContactsScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => ChatScreen(
-                          contact: contact,
+                          contactName: contact.name!,
                           chatId: chatId,
                         ),
                       ),
