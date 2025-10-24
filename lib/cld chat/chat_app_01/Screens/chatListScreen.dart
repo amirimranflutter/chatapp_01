@@ -1,70 +1,86 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/Screens/chatScreen.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/DateUtils.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/models/chatRoomModel.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/models/messageModel.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/localChatRoomService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/MessageServices/localMessage.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../databaseServices/authService.dart';
+import '../services/contactService/lookprofile.dart';
+class ChatContactListScreen extends StatefulWidget {
+  @override
+  _ChatContactListScreenState createState() => _ChatContactListScreenState();
+}
 
-class ChatListScreen extends StatelessWidget {
-  const ChatListScreen({super.key});
+class _ChatContactListScreenState extends State<ChatContactListScreen> {
+  List<ChatRoomModel> chatRooms = [];
+  Map<String, MessageModel?> lastMessages = {};
+
+  @override
+  void initState() {
+    super.initState();
+    loadChats();
+  }
+
+  Future<void> loadChats() async {
+    final currentUserId = ProfileLookupService.currentUser!.id;
+
+    // 1. Fetch chat rooms where user is a participant
+    chatRooms = await HiveChatRoomService().fetchChatRoomsForUser(currentUserId);
+
+    // 2. For each room, fetch last message
+    for (final room in chatRooms) {
+      final message = await HiveMessageService().fetchLastMessage(room.id);
+      lastMessages[room.id] = message;
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
 
-    final dummyChats = [
-      {'name': 'Amir Imran', 'lastMessage': 'Hey, how are you?', 'time': '10:30 AM'},
-      {'name': 'Anza', 'lastMessage': 'Let’s meet tomorrow.', 'time': '09:15 AM'},
-      {'name': 'Ali Raza', 'lastMessage': 'Send me the file.', 'time': 'Yesterday'},
-      {'name': 'John Doe', 'lastMessage': 'Ok, done!', 'time': 'Mon'},
-    ];
+    if (chatRooms.isEmpty) {
+      return Center(child: Text('No chats yet'));
+    }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-        elevation: 1,
-        actions: [
-          IconButton(onPressed: ()async{
-            await authService.signOut();
-            if (context.mounted) {
-              Navigator.pushReplacementNamed(context, '/login');
-            }
-          }, icon: Icon(Icons.logout)),
-        ],
-      ),
-      body: ListView.separated(
-        itemCount: dummyChats.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (_, index) {
-          final chat = dummyChats[index];
-          return ListTile(
-            leading: CircleAvatar(
-              radius: 25,
-              backgroundColor: Colors.blueAccent.withOpacity(0.2),
-              child: Text(
-                chat['name']![0],
-                style: const TextStyle(fontSize: 20, color: Colors.blue),
+    return ListView.builder(
+      itemCount: chatRooms.length,
+      itemBuilder: (context, index) {
+        final chatRoom = chatRooms[index];
+        final message = lastMessages[chatRoom.id];
+
+        final currentUser = ProfileLookupService.currentUser;
+        if (currentUser == null) {
+          return const SizedBox(); // or any placeholder UI
+        }
+
+        String displayName = chatRoom.type == 'group'
+            ? (chatRoom.name ?? 'Group Chat')
+            : chatRoom.otherParticipantName(currentUser.id);
+
+        return ListTile(
+          leading: Icon(Icons.person),
+          title: Text(displayName),
+          subtitle: Text(message?.text ?? 'No messages yet'),
+          trailing: Text(
+            message != null
+                ? DateUtilities.formatTimestamp(message.createdAt)
+                : '',
+            style: TextStyle(fontSize: 12),
+          ),
+          onTap: () {
+            // Navigate to chat screen
+            Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ChatScreen(
+                chatId: chatRoom.id,
+                contactName:  displayName,
               ),
-            ),
-            title: Text(
-              chat['name']!,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              chat['lastMessage']!,
-              style: const TextStyle(color: Colors.grey),
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Text(
-              chat['time']!,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Open chat with ${chat['name']}')),
-              );
-            },
-          );
-        },
-      ),
+            ));
+          },
+        );
+      },
     );
   }
 }
+
+
