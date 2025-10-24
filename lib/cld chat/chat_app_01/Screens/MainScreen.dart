@@ -41,7 +41,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
-      const ChatListScreen(),
+       ChatContactListScreen(),
       const CallsScreen(),
       const ContactsScreen(),
       // ProfileScreen(userId: currentUser!.id),
