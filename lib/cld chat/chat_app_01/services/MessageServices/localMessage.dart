@@ -26,7 +26,7 @@ class HiveMessageService {
       'id': message.id,
       'senderId': message.senderId,
       'chatId': message.chatId,
-      'text': message.text,
+      'content': message.content,
       'createdAt': message.createdAt.toIso8601String(),
       'isSynced': message.isSynced,
     });
@@ -43,26 +43,7 @@ class HiveMessageService {
   }
 
   /// Load messages between two users
-  Future<List<MessageModel>> getMessages(String userId, String contactId) async {
 
-    final box = await _ensureBox();
-    final all = box.values;
-
-    return all
-        .where((item) =>
-    (item['senderId'] == userId && item['receiverId'] == contactId) ||
-        (item['senderId'] == contactId && item['receiverId'] == userId))
-        .map((m) => MessageModel(
-      id: m['id'],
-      senderId: m['senderId'],
-      chatId: m['chatId'],
-      text: m['text'],
-      createdAt: DateTime.parse(m['createdAt']),
-      isSynced: m['isSynced'],
-    ))
-        .toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-  }
 
   /// Get offline pending messages
   Future<List<MessageModel>> getUnsyncedMessages() async {
@@ -75,14 +56,14 @@ class HiveMessageService {
       id: m['id'],
       senderId: m['senderId'],
       chatId: m['chatId'],
-      text: m['text'],
+      content: m['text'],
       createdAt: DateTime.parse(m['createdAt']),
       isSynced: m['isSynced'],
     ))
         .toList();
   }
 
-  /// Return the most recent message for a given chat room
+  // Return the most recent message for a given chat room
   Future<MessageModel?> fetchLastMessage(String chatId) async {
     final box = await _ensureBox();
 
@@ -96,4 +77,36 @@ class HiveMessageService {
     messagesForRoom.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return messagesForRoom.first;
   }
+
+
+
+  Future<void> printAllMessages() async {
+    final box = await Hive.openBox('messages_box');
+
+    if (box.isEmpty) {
+      print('📭 No messages found in Hive.');
+      return;
+    }
+
+    print('📦 All messages in Hive (messages_box):');
+    for (var e in box.values) {
+      final msg = MessageModel.fromJson(Map<String, dynamic>.from(e));
+      print(
+        '🗨️ ID: ${msg.id}\n'
+            'Chat ID: ${msg.chatId}\n'
+            'Sender ID: ${msg.senderId}\n'
+            'Content: ${msg.content}\n'
+            'Created At: ${msg.createdAt}\n'
+            'Synced: ${msg.isSynced}\n'
+            '----------------------------',
+      );
+    }
+  }
+
+  Future<void> clearAllMessages() async {
+    final box = await Hive.openBox(boxName);
+    await box.clear(); // ✅ deletes all messages inside
+    print('🧹 All messages cleared from Hive ($boxName)');
+  }
+
 }
