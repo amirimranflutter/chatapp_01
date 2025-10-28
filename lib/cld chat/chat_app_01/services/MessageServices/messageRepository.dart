@@ -22,8 +22,8 @@ class MessageRepository {
   }
 
   /// Load chat from local storage (async now)
-  Future<List<MessageModel>> getLocalMessages(String userId, String contactId) async {
-    return await _local.getMessages(userId, contactId);
+  Future<List<MessageModel>> getLocalMessages(String chatId) async {
+    return await _local.getMessagesByChatId(chatId);
   }
 
   /// Force remote → local sync (optional)
