@@ -1,5 +1,6 @@
 
 
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
 import 'package:flutter/material.dart';
 import '../models/messageModel.dart';
 import '../services/MessageServices/messageRepository.dart';
@@ -17,8 +18,8 @@ class ChatProvider extends ChangeNotifier {
   ChatProvider(this._repo, {required this.currentUserId});
 
   /// Load local messages for a specific contact
-  void loadMessages(String contactId) async{
-    _messages = await _repo.getLocalMessages(currentUserId, contactId);
+  void loadMessages(String chatId) async{
+    _messages = await _repo.getLocalMessages(chatId);
     notifyListeners();
   }
 
@@ -29,7 +30,13 @@ class ChatProvider extends ChangeNotifier {
       chatId: chatId,
       text: text,
     );
+    // print("💬 Sending message:");
+    // print(" - chatId: $chatId");
+    // print(" - senderId: $currentUserId");
 
+    if (chatId.isEmpty || currentUserId.isEmpty) {
+      print("❌ ERROR: Missing chatId or senderId!");
+      return;}
     await _repo.sendMessage(newMessage);
 
     _messages.add(newMessage);
