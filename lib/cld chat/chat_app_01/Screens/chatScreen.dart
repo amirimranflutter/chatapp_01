@@ -1,5 +1,6 @@
 // screens/chat_screen.dart
 
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/MessageServices/localMessage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/chatProvider.dart';
@@ -21,10 +22,13 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     /// Load messages for this user-contact pair
-    Future.microtask(() {
-      context.read<ChatProvider>().loadMessages(widget.contactName);
-      print('contact->>>>> in chat screen---->>> ${widget.contactName}');
-    });
+    // Future.microtask(() {
+    //   context.read<ChatProvider>().loadMessages(widget.contactName);
+    //   print('contact->>>>> in chat screen---->>> ${widget.contactName}');
+    // });
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.loadMessages(widget.chatId);
+
   }
 
   @override
@@ -63,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(msg.text),
+                        Text(msg.content),
                         const SizedBox(height: 3),
                         Text(
                           msg.createdAt.toLocal().toString().split('.')[0],
@@ -94,12 +98,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   IconButton(
                     icon: const Icon(Icons.send),
                     onPressed: () async {
-                      final text = _textController.text.trim();
-                      if (text.isNotEmpty) {
-                        await chatProvider.sendMessage(
-                            text, widget.chatId);
-                        _textController.clear();
-                      }
+      final text = _textController.text.trim();
+      if (text.isNotEmpty) {
+        await chatProvider.sendMessage(
+            text, widget.chatId);
+        _textController.clear();
+    }
+    // HiveMessageService().printAllMessages();
+    // HiveMessageService().clearAllMessages();
+
                     },
                   ),
                 ],
