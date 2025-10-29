@@ -1,17 +1,14 @@
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/DateUtils.dart';
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/supabase_contact_service.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:hive/hive.dart';
 import '../../models/contactModel.dart';
 
 class HiveDBService {
 
   static const String boxName = 'contactsBox';
-
+  static const String pendingDeleteBoxName = 'pending_deletes';
   // Open Hive box (database)
   Future<Box> _openBox() async => await Hive.openBox(boxName);
-
+  Future<Box> _openPendingDeleteBox() async => await Hive.openBox(pendingDeleteBoxName);
   // Save contact locally
   Future<void> saveContact(ContactModel contact) async {
     final box = await _openBox();
@@ -69,62 +66,34 @@ if(contactMap!=null)
           "📌 Contact => "
               "id: ${contact.id}, "
               "email: ${contact.email}, "
-              "isSynced: ${contact.isSynced}"
+              "isSynced: ${contact.isSynced}, "
+              "contactId: ${contact.contactId}"
       );
     }
   }
-
-
-  // Update contact sync status
-  Future<void> uploadPendingContacts(BuildContext context) async {
-    final allContacts = await HiveDBService().getAllContacts();
-
-    for (var contact in allContacts) {
-      // Only process contacts that are NOT synced
-      if (!contact.isSynced) {
-        print('here uploadPending contact 1');
-          // 1. Get the profile by email (to find contactId)
-          final profile = await ProfileLookupService().getProfileByEmail(contact.email!);
-          String? contactId;
-          final _currentUser = ProfileLookupService.currentUser;
-          if (profile != null) {
-            contactId = profile!['id'];
-            final exists = await SupabaseContactService()
-                .contactExists(_currentUser!.id, contactId!);
-
-            if (exists) {
-              await updateSyncStatus(contact.id,true);
-              print("⚠️ Contact already exists, marking synced: ${contact.email}");
-              await HiveDBService().updateSyncStatus(contact.id, true);
-              continue; // ✅ prevents re-upload
-            }
-            final newContact = ContactModel(
-              id: contact.id,
-              userId: _currentUser!.id,
-              contactId: contactId, // null if not in profile
-              email: contact
-              .email,
-              name: contact.name,
-              isSynced: true,
-            );
-            if (contactId != null) {
-              final uploadSuccess = await SupabaseContactService()
-                  .uploadContact(context, newContact);
-              print('here uploadPending contact ');
-              if (uploadSuccess) {
-                await updateSyncStatus(newContact.id,true);
-                print("✅ Sync status updated after successful upload");
-              } else {
-                print("⚠️ Upload failed — sync status remains false");
-              }
-            }
-          } else {
-            print('⚠️ No profile found for email: ${contact.email}');
-            continue; // Skip and don't upload if no profile found
-          }
-      }
+  Future<void> markPendingDelete(String contactId) async {
+    final box = await _openBox();
+    final contactMap = box.get(contactId);
+    if (contactMap != null) {
+      final updated = Map<String, dynamic>.from(contactMap);
+      updated['pendingDelete'] = true;
+      await box.put(contactId, updated);
     }
+  }
 
+  Future<void> addPendingDelete(String contactId) async {
+    final box = await _openPendingDeleteBox();
+    await box.put(contactId, true); // value doesn’t matter, just a flag
+  }
+  Future<List<String>> getPendingDeletes() async {
+    final box = await _openPendingDeleteBox();
+    return box.keys.cast<String>().toList();
+  }
+
+  // 🧹 Clear once successfully deleted remotely
+  Future<void> removePendingDelete(String contactId) async {
+    final box = await _openPendingDeleteBox();
+    await box.delete(contactId);
   }
 
 }
