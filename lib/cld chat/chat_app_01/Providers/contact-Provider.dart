@@ -1,3 +1,4 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/globalSyncManager.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../models/contactModel.dart';
@@ -6,7 +7,7 @@ import '../services/contactService/syncService.dart';
 
 class ContactProvider with ChangeNotifier {
   final HiveDBService _localDB = HiveDBService();
-  final SyncService _syncService = SyncService();
+  final SyncContactService _syncService = SyncContactService();
 
   List<ContactModel> _contacts = [];
   List<ContactModel> get contacts => _contacts;
@@ -27,12 +28,7 @@ class ContactProvider with ChangeNotifier {
     } // Upload if possible
   }
 
-  Future<void> uploadPendingContacts(BuildContext context) async {
-    await _syncService.syncContacts(context);
-    await loadContacts();
 
-
-  }
 
   // Future<void> deleteContact(ContactModel contact, BuildContext context) async {
   //   await _localDB.deleteContact(contact.id);
@@ -41,14 +37,27 @@ class ContactProvider with ChangeNotifier {
   // }
   Future<void> deleteContact(BuildContext context, String contactId) async {
     try {
-      await _localDB.deleteContact(contactId);   // ✅ Remove from Hive
-      notifyListeners();                        // ✅ Refresh UI
+      final hasNetwork = await GlobalSyncManager.checkInternet();
 
-      // Now sync delete to Supabase
+      // 1️⃣ Always delete locally (so UI updates)
+      await _localDB.deleteContact(contactId);
+      _contacts = await _localDB.getAllContacts();
+      notifyListeners();
+
+      // 2️⃣ If no network, store for later sync
+      if (!hasNetwork) {
+        await _localDB.addPendingDelete(contactId);
+        print("⚠️ Offline — stored for later deletion sync");
+        return;
+      }
+
+      // 3️⃣ Online: delete immediately from Supabase
       await _syncService.deleteRemoteContact(context, contactId);
+      print("🗑️ Deleted from both Hive & Supabase");
     } catch (e) {
-      print("❌ Local delete failed: $e");
+      print("❌ Delete failed: $e");
     }
   }
+
 
 }
