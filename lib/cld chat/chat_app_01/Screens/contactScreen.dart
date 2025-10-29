@@ -1,15 +1,21 @@
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Screens/addContact.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/databaseServices/authService.dart';
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/chatRoomService.dart';
+ import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/localChatRoomService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/hive_db_service.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/contact-Provider.dart';
 import 'chatScreen.dart';
 
-class ContactsScreen extends StatelessWidget {
+class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
 
+  @override
+  State<ContactsScreen> createState() => _ContactsScreenState();
+}
+
+class _ContactsScreenState extends State<ContactsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,24 +62,27 @@ class ContactsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right, color: Colors.grey),
                   // Replace `ContactModel` and `chatProvider` with your app’s types
                   onTap: () async {
-                    final contactId = contact.userId;             // The profile id of the contact
+                    final contactId = contact.contactId.toString();             // The profile id of the contact
                     final currentUserId = ProfileLookupService.currentUser!.id;
-
-                    // Find or create chat room
-                    String chatId = await ChatRoomService().findOrCreateChatRoom(currentUserId, contactId);
+                    print('Tapped contact -> Name: ${contact.name}');
+                    print('Tapped contact -> Email: ${contact.email}');
+                    print('Tapped contact -> ID: $contactId');
+                    // Find or create chat room (OOP service)
+                    // String chatId = await HiveChatRoomService().findOrCreateChatRoom(currentUserId, contactId);
+                     // HiveChatRoomService().printAllChatRooms();
+                     HiveChatRoomService().clearAllChatRooms();
 
                     // Navigate to chat screen, passing chatId
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatScreen(
-                          contactName: contact.name!,
-                          chatId: chatId,
-                        ),
-                      ),
-                    );
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (context) => ChatScreen(
+                     //       contactName: contact.name!,
+                    //       chatId: chatId,
+                    //     ),
+                    //   ),
+                    // );
                   },
-
                   onLongPress: () => provider.deleteContact(context, contact.id),
               );
             },
@@ -82,6 +91,7 @@ class ContactsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
+          // HiveDBService().debugPrintAllContacts();
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AddContactScreen()),
