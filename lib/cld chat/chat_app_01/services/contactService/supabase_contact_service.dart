@@ -1,7 +1,7 @@
 // services/supabase_contact_service.dart
 import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../Utils/networkHelpr.dart';
+import '../../Utils/globalSyncManager.dart';
 import '../../Utils/showSnackBar.dart';
 import '../../models/contactModel.dart';
 import 'hive_db_service.dart';
@@ -14,7 +14,7 @@ class SupabaseContactService {
   // Upload a new contact
   Future<bool> uploadContact(BuildContext context, ContactModel contact) async {
     try {
-      final hasNetwork = await NetworkHelper().checkInternet();
+      final hasNetwork = await GlobalSyncManager.checkInternet();
       if (!hasNetwork) {
         print("⚠️ No internet — skipping Supabase upload");
         return false;
