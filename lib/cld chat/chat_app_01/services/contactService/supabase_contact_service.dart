@@ -1,4 +1,5 @@
 // services/supabase_contact_service.dart
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../Utils/globalSyncManager.dart';
@@ -76,6 +77,75 @@ class SupabaseContactService {
     } catch (e) {
       print("❌ Failed to delete contact in SupabaseContactService deleteContact $e");
       // SnackbarService.showError(context, "Failed to delete contact: $e");
+    }
+  }
+  Future<ContactModel?> fetchMapAndUpload(ContactModel contact) async {
+    try {
+      print("🔹 Starting fetchMapAndUpload for: ${contact.email}");
+      print("Initial contact data: id=${contact.id}, userId=${contact.userId}, contactId=${contact.contactId}");
+
+      // 🧩 1️⃣ Validate
+      if (contact.email == null || contact.email!.isEmpty) {
+        print("⚠️ Contact email is missing — cannot fetch profile.");
+        return null;
+      }
+
+      print("🔍 Fetching profile for email: ${contact.email}");
+
+      // 🧠 2️⃣ Fetch profile by email
+      final profile = await ProfileLookupService().getProfileByEmail(contact.email!);
+      print("📥 Raw profile response: $profile");
+
+      if (profile == null) {
+        print("❌ No profile found for ${contact.email}");
+        return null;
+      }
+
+      // 🧠 3️⃣ Extract profile data
+      final profileId = profile['id'] as String?;
+      final avatarUrl = profile['avatar_url'] as String?;
+
+      if (profileId == null) {
+        print("⚠️ Profile found but missing ID for ${contact.email}");
+        return null;
+      }
+// In fetchMapAndUpload
+      print("🔹 fetchMapAndUpload for: ${contact.email}");
+      // 🧠 4️⃣ Update local contact model
+      contact.contactId = profileId;
+      contact.avatarUrl = avatarUrl;
+      contact.isSynced = true;
+
+
+      // 🧩 5️⃣ Check if contact already exists on Supabase
+      final existing = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('id', contact.id)
+          .eq('contact_id', contact.contactId!)
+          .maybeSingle();
+
+
+      if (existing != null) {
+        print("⚠️ Contact already exists on Supabase for ${contact.email}");
+        return contact;
+      }
+
+      // 🧩 6️⃣ Upload contact to Supabase
+      final response = await supabase.from('contacts').insert({
+        'id': contact.id,
+        'user_id': contact.userId,
+        'contact_id': contact.contactId,
+      });
+
+      print("✅ Contact uploaded successfully: ${contact.email}");
+      print("📦 Supabase response: $response");
+
+      return contact;
+
+    } catch (e, st) {
+      print("🔥 Error in fetchMapAndUpload: $e");
+      return null;
     }
   }
 

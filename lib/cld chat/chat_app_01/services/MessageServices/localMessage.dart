@@ -42,8 +42,15 @@ class HiveMessageService {
     }
   }
 
-  /// Load messages between two users
-
+  Future<List<MessageModel>> getMessagesByChatId(String chatId) async {
+    final box = await _ensureBox();
+    final messages = box.values
+        .map((e) => MessageModel.fromJson(Map<String, dynamic>.from(e)))
+        .where((m) => m.chatId == chatId)
+        .toList();
+    messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return messages;
+  }
 
   /// Get offline pending messages
   Future<List<MessageModel>> getUnsyncedMessages() async {

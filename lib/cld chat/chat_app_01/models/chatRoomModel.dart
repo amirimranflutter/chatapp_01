@@ -1,5 +1,7 @@
 import 'package:chat_app_cld/cld%20chat/chat_app_01/models/messageModel.dart';
 
+import '../services/contactService/hive_db_service.dart';
+
 class ChatRoomModel {
   final String id;
   final List<String> participantIds; // User IDs
@@ -18,7 +20,6 @@ class ChatRoomModel {
   });
 
   factory ChatRoomModel.fromMap(Map<String, dynamic> map) {
-    // Parse last message if it exists
     final lastMsgList = map['last_message'] as List?;
 
     return ChatRoomModel(
@@ -35,14 +36,40 @@ class ChatRoomModel {
           : null,
     );
   }
-  String otherParticipantName(String currentUserId) {
-    // Find the first participant that is NOT the current user
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'participants': participantIds.map((id) => {'user_id': id}).toList(),
+      'name': name,
+      'type': type,
+      'created_at': createdAt.toIso8601String(),
+      'last_message': lastMessage?.toJson(),
+    };
+  }
+
+  /// Return the other participant's ID (for private chats)
+  String otherParticipantId(String currentUserId) {
+    return participantIds.firstWhere(
+          (id) => id != currentUserId,
+      orElse: () => 'Unknown',
+    );
+  }
+
+  Future<String> otherParticipantName(String currentUserId) async {
     final otherId = participantIds.firstWhere(
           (id) => id != currentUserId,
       orElse: () => 'Unknown',
     );
-    return otherId; // or fetch actual name if available in your profile map
+
+    if (otherId == 'Unknown') return 'Unknown';
+
+    // Try fetching contact info from Hive
+    final hiveDB = HiveDBService();
+    final contact = await hiveDB.getContactByContactId(otherId);
+
+    // If found in local contacts, return their name, otherwise show fallback
+    return contact?.name ?? 'Unknown User';
   }
 }
-
 

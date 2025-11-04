@@ -43,6 +43,8 @@ class _AddContactScreenState extends State<AddContactScreen> {
       email: _emailController.text.trim(),
       isSynced: false, // always false on local save
     );
+    // In _saveContact
+    print("💾 _saveContact called for: ${contact.email}");
     final provider = Provider.of<ContactProvider>(context, listen: false);
     await provider.addContact(contact, context);
 

@@ -1,7 +1,7 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authLocalService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/auth/authScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../databaseServices/authDBService.dart';
 import 'mainScreen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    final hiveAuth = HiveAuthService();
+    final hiveAuth = AuthLocalService();
 
     if (hiveAuth.isLoggedIn()) {
       // ✅ Navigate to main chat screen

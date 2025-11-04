@@ -18,23 +18,35 @@ class ContactProvider with ChangeNotifier {
   }
 
   Future<void> addContact(ContactModel contact, BuildContext context) async {
-    await _localDB.saveContact(contact);
+    await _localDB.savePendingContact(contact);
+// In addContact
+    print("📥 addContact saving locally: ${contact.email}");
     _contacts.add(contact);
+
     notifyListeners();
-    try {
-      await _syncService.syncSingleContact(context, contact);
-    } catch (e) {
-      print("Sync error: $e");
-    } // Upload if possible
+    await _localDB.printPendingSyncBox();
+    GlobalSyncManager.startSyncListener(context);
+
+    // ✅ Trigger one-time sync check when app opens
+    Future.delayed(const Duration(seconds: 1), () async {
+      final hasInternet = await GlobalSyncManager.checkInternet();
+      final hasPending = await HiveDBService().hasPendingContacts();
+
+    if (hasPending && hasInternet) {
+      print("🚀 Pending contacts found — starting sync now...");
+      syncContacts(context);
+    } else {
+      print("💤 No pending contacts or offline — skipping startup sync");
+    }  });
+  }
+  Future<void> syncContacts(BuildContext context) async {
+    await _syncService.syncContacts(context);
+    await loadContacts(); // refresh UI with updated local data
   }
 
 
 
-  // Future<void> deleteContact(ContactModel contact, BuildContext context) async {
-  //   await _localDB.deleteContact(contact.id);
-  //   notifyListeners();
-  //   await _syncService.syncContacts(context);
-  // }
+
   Future<void> deleteContact(BuildContext context, String contactId) async {
     try {
       final hasNetwork = await GlobalSyncManager.checkInternet();

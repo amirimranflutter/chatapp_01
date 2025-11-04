@@ -1,15 +1,15 @@
 // screens/chat_screen.dart
 
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/MessageServices/localMessage.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/models/contactModel.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/chatProvider.dart';
-import '../models/contactModel.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String contactName;
 final String chatId;
-  const ChatScreen({required this.contactName,required this.chatId, Key? key}) : super(key: key);
+final ContactModel contact;
+  const ChatScreen({required this.contact, required this.chatId,Key? key}) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -38,7 +38,39 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.contactName ?? 'Chat'),
+        title: Row(
+      children: [
+      // Circular avatar with CachedNetworkImage
+      CircleAvatar(
+      radius: 20,
+        backgroundColor: Colors.grey[300],
+        child: widget.contact.avatarUrl != null && widget.contact.avatarUrl!.isNotEmpty
+            ? ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: widget.contact.avatarUrl!,
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => CircularProgressIndicator(
+              strokeWidth: 2,
+            ),
+            errorWidget: (context, url, error) => Icon(
+              Icons.person,
+              color: Colors.white,
+            ),
+          ),
+        )
+            : Icon(Icons.person, color: Colors.white),
+      ),
+      SizedBox(width: 12),
+      Expanded(
+        child: Text(
+          widget.contact.name ?? 'Chat',
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      ],
+    ),
       ),
       body: Column(
         children: [

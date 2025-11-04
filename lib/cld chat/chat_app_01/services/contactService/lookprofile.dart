@@ -9,7 +9,7 @@ class ProfileLookupService {
     try {
       final response = await _supabase
           .from('profiles')
-          .select('id, display_name, email')
+          .select('id, display_name, email,avatar_url')
           .eq('email', email)
           .maybeSingle(); // ✅ Directly returns the row or null
 

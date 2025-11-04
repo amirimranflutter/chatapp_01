@@ -1,3 +1,4 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/Providers/chatProvider.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Screens/chatScreen.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/DateUtils.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/models/chatRoomModel.dart';
@@ -19,6 +20,7 @@ class _ChatContactListScreenState extends State<ChatContactListScreen> {
   @override
   void initState() {
     super.initState();
+
     loadChats();
   }
 
@@ -37,10 +39,10 @@ class _ChatContactListScreenState extends State<ChatContactListScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-
     if (chatRooms.isEmpty) {
-      return Center(child: Text('No chats yet'));
+      return const Center(child: Text('No chats yet'));
     }
 
     return ListView.builder(
@@ -48,39 +50,56 @@ class _ChatContactListScreenState extends State<ChatContactListScreen> {
       itemBuilder: (context, index) {
         final chatRoom = chatRooms[index];
         final message = lastMessages[chatRoom.id];
+        final currentUser = ProfileLookupService.currentUser!;
 
-        final currentUser = ProfileLookupService.currentUser;
-        if (currentUser == null) {
-          return const SizedBox(); // or any placeholder UI
-        }
+        // 👇 Use FutureBuilder for async contact lookup
+        return FutureBuilder<String>(
+          future: chatRoom.otherParticipantName(currentUser.id),
+          builder: (context, snapshot) {
+            // Handle loading/error states
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const ListTile(
+                leading: CircularProgressIndicator(),
+                title: Text("Loading..."),
+              );
+            }
+            if (snapshot.hasError) {
+              return ListTile(
+                leading: const Icon(Icons.error, color: Colors.red),
+                title: Text('Error: ${snapshot.error}'),
+              );
+            }
 
-        String displayName = chatRoom.type == 'group'
-            ? (chatRoom.name ?? 'Group Chat')
-            : chatRoom.otherParticipantName(currentUser.id);
+            final displayName = snapshot.data ?? 'Unknown User';
 
-        return ListTile(
-          leading: Icon(Icons.person),
-          title: Text(displayName),
-          subtitle: Text(message?.text ?? 'No messages yet'),
-          trailing: Text(
-            message != null
-                ? DateUtilities.formatTimestamp(message.createdAt)
-                : '',
-            style: TextStyle(fontSize: 12),
-          ),
-          onTap: () {
-            // Navigate to chat screen
-            Navigator.push(context, MaterialPageRoute(
-              builder: (_) => ChatScreen(
-                chatId: chatRoom.id,
-                contactName:  displayName,
+            return ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(displayName),
+              subtitle: Text(message?.content ?? 'No messages yet'),
+              trailing: Text(
+                message != null
+                    ? DateUtilities.formatTimestamp(message.createdAt)
+                    : '',
+                style: const TextStyle(fontSize: 12),
               ),
-            ));
+              onTap: () {
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => ChatScreen(
+                //       chatId: chatRoom.id,
+                //       contactName: displayName,
+                //     ),
+                //   ),
+                // );
+              },
+            );
           },
         );
       },
     );
   }
+
 }
 
 
