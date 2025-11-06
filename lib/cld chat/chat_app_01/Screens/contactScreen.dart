@@ -1,14 +1,18 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authLocalService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authSyncService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Screens/addContact.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Screens/chatScreen.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/auth/authScreen.dart';
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/hive_db_service.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/syncService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/hiveContactService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/lookprofile.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/syncContactService.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/contact-Provider.dart';
 import '../services/ChatRoomService/localChatRoomService.dart';
+import '../services/ChatRoomService/supabaseChatRoomService.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -17,11 +21,17 @@ class ContactsScreen extends StatefulWidget {
 }
 
 class _ContactsScreenState extends State<ContactsScreen> {
+  final currrentUserID=AuthLocalService().getCurrentUser();
+  final syncService = ChatRoomSyncService(
+    HiveChatRoomService(),
+    SupabaseChatRoomService(),
+  );
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ContactProvider>(context, listen: false).loadContacts();
+      final userId = Provider.of<AuthSyncService>(context, listen: false).getUserId();
+      Provider.of<ContactProvider>(context, listen: false).loadContacts(userId.toString());
     });
   }
     @override
@@ -112,9 +122,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
                   print('Tapped contact -> Email: ${contact.email}');
                   print('Tapped contact -> ContactID: ${contact.contactId}');
 
-                  String chatId = await HiveChatRoomService()
-                      .findOrCreateChatRoom(currentUserId, contactId);
-
+                  // String chatId = await HiveChatRoomService()
+                  //     .findOrCreateChatRoom(currentUserId, contactId);
+                  String chatId =await syncService.findOrCreateChatRoom(currentUserId, contactId);
 
                   Navigator.push(
                     context,
@@ -132,15 +142,20 @@ class _ContactsScreenState extends State<ContactsScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // HiveDBService().clearContactsBox();
-          // HiveDBService().clearPendingSyncContactsBox();
-          // HiveDBService().printAllContacts();
-          // HiveDBService().printPendingSyncBox();
+          
+          // HiveContactService().clearContactsBoxForUser(currrentUserID.toString());
+          // HiveContactService().clearPendingSyncContactsBoxForUser(currrentUserID.toString());
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddContactScreen()),
-          );
+          HiveContactService().printAllContactsForUser(currrentUserID!.id);
+          // HiveContactService().debugHiveBox('contactsBox');
+          // HiveContactService().findContactIdInBoxes('e6c4a579-dd79-480d-9b5f-cf36e7da7f05','ebe74a4f-cb07-47fb-a07f-894c994c9dbc');
+         // print('currentUser is ---->>> $user');
+         //  HiveContactService().printPendingSyncBoxForUser(currrentUserID.toString());
+          // SyncContactService().syncContacts(context);
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(builder: (_) => const AddContactScreen()),
+          // );
         },
         icon: const Icon(Icons.person_add),
         label: const Text("Add Contact"),

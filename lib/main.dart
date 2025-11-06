@@ -1,5 +1,8 @@
 import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authLocalService.dart';
 import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/globalSyncManager.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/localChatRoomService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/supabaseChatRoomService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/ChatRoomService/syncService.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -9,7 +12,6 @@ import 'cld chat/chat_app_01/Providers/chatProvider.dart';
 import 'cld chat/chat_app_01/Providers/contact-Provider.dart';
 import 'cld chat/chat_app_01/Providers/profileProvider.dart';
 import 'cld chat/chat_app_01/Screens/MainScreen.dart';
-import 'cld chat/chat_app_01/Screens/chatScreen.dart';
 import 'cld chat/chat_app_01/Screens/profileScreen.dart';
 import 'cld chat/chat_app_01/Screens/splashScreen.dart';
 import 'cld chat/chat_app_01/auth/authScreen.dart';
@@ -24,10 +26,19 @@ void main() async {
 
   // ✅ Initialize Hive
   await Hive.initFlutter();
-
   Hive.registerAdapter(UserModelAdapter());
-  await Hive.deleteFromDisk();
+
+  await Hive.openBox('session');
+  await Hive.openBox<UserModel>('userBox');
+  // await Hive.deleteFromDisk();
   await AuthLocalService.init();
+  // final hiveMessageService = HiveMessageService();
+  // final supabaseMessageService = SupabaseMessageService();
+  // final syncMessageService = SyncMessageService(
+  //   hiveMessageService,
+  //   supabaseMessageService,
+  // );
+  //
 
 
   // ✅ Initialize Supabase
@@ -42,33 +53,39 @@ void main() async {
   }
 
   // ✅ Prepare message repository
-  final repo = MessageRepository(
+  final repo = SyncMessageService(
     HiveMessageService(),
     SupabaseMessageService(),
   );
-
+  final hiveChatRoomService = HiveChatRoomService();
+  final supabaseChatRoomService = SupabaseChatRoomService();
+  final chatRoomSyncService = ChatRoomSyncService(
+    hiveChatRoomService,
+    supabaseChatRoomService,
+  );
   // ✅ Run app
-  runApp(MyApp(repo: repo));
+  runApp(MyApp(repo: repo,chatRoomSyncService: chatRoomSyncService));
 }
 
 class MyApp extends StatelessWidget {
-  final MessageRepository repo;
-
-  const MyApp({super.key, required this.repo});
+  final SyncMessageService repo;
+  final ChatRoomSyncService chatRoomSyncService;
+  const MyApp({super.key, required this.repo,required this.chatRoomSyncService});
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId=Supabase.instance.client.auth.currentUser!.id;
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthSyncService()),
         ChangeNotifierProvider(create: (_) => ContactProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(
-          create: (_) => ChatProvider(
-            repo,
-            currentUserId: Supabase.instance.client.auth.currentUser?.id ?? '',
-          ),
+          create: (_) => ChatProvider(repo, chatRoomSyncService, currentUserId: currentUserId)
         ),
+    // ChangeNotifierProvider(
+        //   create: (_) => ChatProvider(SyncMessageService, ChatRoomSyncService, currentUserId: currentUserId)
+        // ),
       ],
       child: Builder(
         builder: (context) {

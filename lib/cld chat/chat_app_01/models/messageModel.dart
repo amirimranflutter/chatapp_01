@@ -1,71 +1,124 @@
-import 'package:uuid/uuid.dart';
+// models/messageModel.dart
 
-class MessageModel {
+enum MessageStatus {
+  sent,
+  delivered,
+  read;
+
+  String toJson() => name;
+
+  static MessageStatus fromJson(String json) {
+    return MessageStatus.values.firstWhere((e) => e.name == json);
+  }
+}
+
+enum MessageType {
+  text,
+  image,
+  file,
+  voice;
+
+  String toJson() => name;
+
+  static MessageType fromJson(String json) {
+    return MessageType.values.firstWhere((e) => e.name == json);
+  }
+}
+
+class Message {
   final String id;
+  final String chatRoomId;
   final String senderId;
-  final String chatId;
+  final String receiverId;
   final String content;
   final DateTime createdAt;
-  bool isSynced; // For offline support
+  final MessageStatus status;
+  final MessageType messageType;
+  final String? fileUrl;
+  final bool isDeleted;
 
-  MessageModel({
+  Message({
     required this.id,
+    required this.chatRoomId,
     required this.senderId,
-    required this.chatId,
+    required this.receiverId,
     required this.content,
-
     required this.createdAt,
-    this.isSynced = false,
+    required this.status,
+    required this.messageType,
+    this.fileUrl,
+    this.isDeleted = false,
   });
 
-  /// For creating a new outgoing message
-  factory MessageModel.create({
-    required String chatId,
-    required String senderId,
-    required String text,
+  /// Create a copy with modified fields (immutable approach)
+  Message copyWith({
+    String? id,
+    String? chatRoomId,
+    String? senderId,
+    String? receiverId,
+    String? content,
+    DateTime? createdAt,
+    MessageStatus? status,
+    MessageType? messageType,
+    String? fileUrl,
+    bool? isDeleted,
   }) {
-    return MessageModel(
-      id: const Uuid().v4(),
-      senderId: senderId,
-      chatId: chatId,
-      content: text,
-
-      createdAt: DateTime.now(),
-      isSynced: false,
+    return Message(
+      id: id ?? this.id,
+      chatRoomId: chatRoomId ?? this.chatRoomId,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      status: status ?? this.status,
+      messageType: messageType ?? this.messageType,
+      fileUrl: fileUrl ?? this.fileUrl,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
-  /// Convert to Map (for both Supabase and local Hive)
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'sender_id': senderId,
-      'chat_id': chatId,
-      'content': content,
-      'created_at': createdAt.toIso8601String(),
-      // 'is_synced': isSynced,
-    };
+  /// Convert to JSON for storage/API
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'chat_room_id': chatRoomId,
+    'sender_id': senderId,
+    'receiver_id': receiverId,
+    'content': content,
+    'created_at': createdAt.toIso8601String(),
+    'status': status.toJson(),
+    'message_type': messageType.toJson(),
+    'file_url': fileUrl,
+    'is_deleted': isDeleted,
+  };
+
+  /// Create from JSON
+  factory Message.fromJson(Map<String, dynamic> json) => Message(
+    id: json['id'],
+    chatRoomId: json['chat_room_id'],
+    senderId: json['sender_id'],
+    receiverId: json['receiver_id'],
+    content: json['content'],
+    createdAt: DateTime.parse(json['created_at']),
+    status: MessageStatus.fromJson(json['status']),
+    messageType: MessageType.fromJson(json['message_type']),
+    fileUrl: json['file_url'],
+    isDeleted: json['is_deleted'] ?? false,
+  );
+
+  @override
+  String toString() {
+    return 'Message(id: $id, chatRoomId: $chatRoomId, senderId: $senderId, '
+        'receiverId: $receiverId, content: $content, createdAt: $createdAt, '
+        'status: ${status.name}, messageType: ${messageType.name}, '
+        'isDeleted: $isDeleted)';
   }
 
-  /// From Map (works for both Supabase & Hive)
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel(
-      id: (json['id'] ?? const Uuid().v4()).toString(),
-      senderId: json['sender_id'] ?? json['senderId'] ?? '',
-      chatId: json['chat_id'] ?? json['chatId'] ?? '',
-      content: json['content'] ?? '',
-      createdAt: _parseDate(json['created_at'] ?? json['createdAt']),
-      isSynced: json['is_synced'] ?? json['isSynced'] ?? false,
-    );
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Message && other.id == id;
   }
 
-  static DateTime _parseDate(dynamic value) {
-    if (value == null) return DateTime.now();
-    if (value is DateTime) return value;
-    try {
-      return DateTime.parse(value.toString());
-    } catch (_) {
-      return DateTime.now();
-    }
-  }
+  @override
+  int get hashCode => id.hashCode;
 }

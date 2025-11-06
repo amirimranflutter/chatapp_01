@@ -1,75 +1,41 @@
-import 'package:chat_app_cld/cld%20chat/chat_app_01/models/messageModel.dart';
-
-import '../services/contactService/hive_db_service.dart';
-
-class ChatRoomModel {
+class ChatRoom {
   final String id;
-  final List<String> participantIds; // User IDs
-  final String? name;
-  final String type; // "private" or "group"
+  final String participant1Id;
+  final String participant2Id;
   final DateTime createdAt;
-  final MessageModel? lastMessage; // optional: latest message info
+  final DateTime updatedAt;
+  final String? lastMessageContent;
+  final DateTime? lastMessageAt;
 
-  ChatRoomModel({
+  ChatRoom({
     required this.id,
-    required this.participantIds,
-    this.name,
-    required this.type,
+    required this.participant1Id,
+    required this.participant2Id,
     required this.createdAt,
-    this.lastMessage,
+    required this.updatedAt,
+    this.lastMessageContent,
+    this.lastMessageAt,
   });
 
-  factory ChatRoomModel.fromMap(Map<String, dynamic> map) {
-    final lastMsgList = map['last_message'] as List?;
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'participant1_id': participant1Id,
+    'participant2_id': participant2Id,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+    'last_message_content': lastMessageContent,
+    'last_message_at': lastMessageAt?.toIso8601String(),
+  };
 
-    return ChatRoomModel(
-      id: map['id'] ?? '',
-      participantIds: (map['participants'] as List?)
-          ?.map((p) => p['user_id'] as String)
-          .toList() ??
-          [],
-      name: map['name'],
-      type: map['type'] ?? 'private',
-      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-      lastMessage: lastMsgList != null && lastMsgList.isNotEmpty
-          ? MessageModel.fromJson(lastMsgList.first)
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'participants': participantIds.map((id) => {'user_id': id}).toList(),
-      'name': name,
-      'type': type,
-      'created_at': createdAt.toIso8601String(),
-      'last_message': lastMessage?.toJson(),
-    };
-  }
-
-  /// Return the other participant's ID (for private chats)
-  String otherParticipantId(String currentUserId) {
-    return participantIds.firstWhere(
-          (id) => id != currentUserId,
-      orElse: () => 'Unknown',
-    );
-  }
-
-  Future<String> otherParticipantName(String currentUserId) async {
-    final otherId = participantIds.firstWhere(
-          (id) => id != currentUserId,
-      orElse: () => 'Unknown',
-    );
-
-    if (otherId == 'Unknown') return 'Unknown';
-
-    // Try fetching contact info from Hive
-    final hiveDB = HiveDBService();
-    final contact = await hiveDB.getContactByContactId(otherId);
-
-    // If found in local contacts, return their name, otherwise show fallback
-    return contact?.name ?? 'Unknown User';
-  }
+  factory ChatRoom.fromJson(Map<String, dynamic> json) => ChatRoom(
+    id: json['id'],
+    participant1Id: json['participant1_id'],
+    participant2Id: json['participant2_id'],
+    createdAt: DateTime.parse(json['created_at']),
+    updatedAt: DateTime.parse(json['updated_at']),
+    lastMessageContent: json['last_message_content'],
+    lastMessageAt: json['last_message_at'] != null
+        ? DateTime.parse(json['last_message_at'])
+        : null,
+  );
 }
-

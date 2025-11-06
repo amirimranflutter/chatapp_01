@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/syncService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/services/contactService/syncContactService.dart';
 import 'package:provider/provider.dart';
 
 import '../Providers/contact-Provider.dart';

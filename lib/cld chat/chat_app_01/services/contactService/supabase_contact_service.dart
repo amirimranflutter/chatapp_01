@@ -5,13 +5,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../Utils/globalSyncManager.dart';
 import '../../Utils/showSnackBar.dart';
 import '../../models/contactModel.dart';
-import 'hive_db_service.dart';
+import 'hiveContactService.dart';
 
 class SupabaseContactService {
   final supabase = Supabase.instance.client;
   final String contactTable = 'contacts';
   final String profileTable = 'profiles';
-  final _localDB=HiveDBService();
+  final _localDB=HiveContactService();
   // Upload a new contact
   Future<bool> uploadContact(BuildContext context, ContactModel contact) async {
     try {

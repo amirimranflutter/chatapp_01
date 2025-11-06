@@ -1,12 +1,17 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authLocalService.dart';
+import 'package:chat_app_cld/cld%20chat/chat_app_01/Utils/DateUtils.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_app_cld/cld chat/chat_app_01/services/contactService/supabase_contact_service.dart';
+import 'package:provider/provider.dart';
+import '../../AuthServices/authSyncService.dart';
 import '../../Utils/globalSyncManager.dart';
-import 'hive_db_service.dart';
+import 'hiveContactService.dart';
 
 class SyncContactService {
-  final HiveDBService _localDB = HiveDBService();
+  final HiveContactService _localDB = HiveContactService();
   final SupabaseContactService _remoteDB = SupabaseContactService();
-
+  final currentuser=AuthSyncService().getCurrentUser();
+  final CurrentUserId=AuthLocalService().getCurrentUser()!.id;
   /// ✅ Handles: pending contacts, ID-mapping, duplicate prevention, and sync status update
   Future<void> syncContacts(BuildContext context) async {
     final hasNetwork = await GlobalSyncManager.checkInternet();
@@ -20,7 +25,8 @@ class SyncContactService {
     for (var contact in pendingContacts) {
       final updatedContact = await _remoteDB.fetchMapAndUpload( contact);
       if (updatedContact!=null) {
-        await _localDB.moveToMainBox(updatedContact);
+
+        await _localDB.moveToMainBox(updatedContact, currentUser!.id);
 
       }
     }
@@ -38,7 +44,7 @@ class SyncContactService {
         await _localDB.removePendingDelete(contactId);
 
         // ✅ Also ensure it's gone from local Hive contacts box
-        await _localDB.deleteContact(contactId);
+        await _localDB.deleteContact(contactId,currentUser!.id);
 
         print("🗑️ Synced delete: $contactId");
       } catch (e) {

@@ -1,10 +1,12 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authLocalService.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../AuthServices/authSyncService.dart';
 import '../Providers/contact-Provider.dart';
 import '../Screens/contactScreen.dart';
 import '../Utils/globalSyncManager.dart';
-import '../services/contactService/hive_db_service.dart';
-import '../services/contactService/syncService.dart';
+import '../services/contactService/hiveContactService.dart';
+import '../services/contactService/syncContactService.dart';
 
 // These are placeholders for your other pages
 import 'callScreen.dart';
@@ -31,7 +33,8 @@ class _MainScreenState extends State<MainScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final contactProvider = Provider.of<ContactProvider>(context, listen: false);
-      await contactProvider.loadContacts();
+      final userId = Provider.of<AuthSyncService>(context, listen: false).getUserId();
+      await contactProvider.loadContacts(userId.toString());
       // final authService = Provider.of<AuthService>(context, listen: false);
 
       debugPrint("✅ Contacts preloaded at startup");
@@ -41,7 +44,8 @@ class _MainScreenState extends State<MainScreen> {
     // ✅ Trigger one-time sync check when app opens
     Future.delayed(const Duration(seconds: 1), () async {
       final hasInternet = await GlobalSyncManager.checkInternet();
-      final hasPending = await HiveDBService().hasPendingContacts();
+      final currentUserID=AuthLocalService().getCurrentUser();
+      final hasPending = await HiveContactService().hasPendingContacts(currentUserID.toString());
 
       if (hasPending && hasInternet) {
         print("🚀 Pending contacts found — starting sync now...");

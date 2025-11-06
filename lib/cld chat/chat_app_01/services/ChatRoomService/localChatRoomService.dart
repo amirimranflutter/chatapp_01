@@ -1,6 +1,8 @@
-import 'package:chat_app_cld/cld%20chat/chat_app_01/models/chatRoomModel.dart';
+// services/chatRoomServices/hiveChatRoomService.dart
+
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/chatRoomModel.dart';
 
 class HiveChatRoomService {
   static const String boxName = 'chatRoomsBox';
@@ -12,51 +14,114 @@ class HiveChatRoomService {
     return await Hive.openBox(boxName);
   }
 
-  /// Return all rooms where this user is a participant
-  Future<List<ChatRoomModel>> fetchChatRoomsForUser(String userId) async {
+  /// Fetch all chat rooms for a user from local storage
+  Future<List<ChatRoom>> fetchChatRoomsForUser(String userId) async {
     final box = await _openBox();
     final allRooms = box.values
-        .map((e) => ChatRoomModel.fromMap(Map<String, dynamic>.from(e)))
+        .map((e) => ChatRoom.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    return allRooms.where((room) => room.participantIds.contains(userId)).toList();
+
+    // Filter rooms where user is participant1 or participant2
+    return allRooms.where((room) =>
+    room.participant1Id == userId || room.participant2Id == userId
+    ).toList();
   }
 
-  /// Find an existing private chat room by participants, or create a new one
-  Future<String> findOrCreateChatRoom(String userAId, String userBId) async {
-    print('finedOrCreatedRoom');
+  /// Find existing chat room or create new one (matches Supabase function logic)
+  Future<String> findOrCreateChatRoom(String user1Id, String user2Id) async {
+    print('🔍 Finding or creating chat room for: $user1Id <-> $user2Id');
     final box = await _openBox();
+
+    // Sort IDs to ensure consistent ordering (smaller ID first)
+    final smallerId = user1Id.compareTo(user2Id) < 0 ? user1Id : user2Id;
+    final largerId = user1Id.compareTo(user2Id) < 0 ? user2Id : user1Id;
+
+    // Search for existing room with these participants
     final rooms = box.values
-        .map((e) => ChatRoomModel.fromMap(Map<String, dynamic>.from(e)))
+        .map((e) => ChatRoom.fromJson(Map<String, dynamic>.from(e)))
         .toList();
 
-    // Find an existing private chat between the two users
-    ChatRoomModel? found;
+    ChatRoom? existingRoom;
     try {
-      found = rooms.firstWhere((room) =>
-      room.type == 'private' &&
-          room.participantIds.contains(userAId) &&
-          room.participantIds.contains(userBId) &&
-          room.participantIds.length == 2,
+      existingRoom = rooms.firstWhere(
+            (room) =>
+        room.participant1Id == smallerId &&
+            room.participant2Id == largerId,
       );
     } catch (e) {
-      found = null;
+      existingRoom = null;
     }
 
-    if (found != null) return found.id;
+    if (existingRoom != null) {
+      print('✅ Found existing room: ${existingRoom.id}');
+      return existingRoom.id;
+    }
 
-    // Otherwise create new
-    print("Otherwise create new");
+    // Create new room
+    print('📝 Creating new chat room...');
     final chatId = const Uuid().v4();
-    final newRoom = ChatRoomModel(
+    final now = DateTime.now();
+
+    final newRoom = ChatRoom(
       id: chatId,
-      participantIds: [userAId, userBId],
-      type: 'private',
-      createdAt: DateTime.now(),
+      participant1Id: smallerId,
+      participant2Id: largerId,
+      createdAt: now,
+      updatedAt: now,
     );
 
-    await box.put(chatId, newRoom.toMap());
+    await box.put(chatId, newRoom.toJson());
+    print('✅ Created new room: $chatId');
     return chatId;
   }
+
+  /// Get a specific chat room by ID
+  Future<ChatRoom?> getChatRoomById(String chatId) async {
+    final box = await _openBox();
+    final roomData = box.get(chatId);
+
+    if (roomData == null) return null;
+
+    return ChatRoom.fromJson(Map<String, dynamic>.from(roomData));
+  }
+
+  /// Update chat room's last message info
+  Future<void> updateLastMessage(String chatId, String message, DateTime timestamp) async {
+    final box = await _openBox();
+    final roomData = box.get(chatId);
+
+    if (roomData != null) {
+      final room = ChatRoom.fromJson(Map<String, dynamic>.from(roomData));
+      final updatedRoom = ChatRoom(
+        id: room.id,
+        participant1Id: room.participant1Id,
+        participant2Id: room.participant2Id,
+        createdAt: room.createdAt,
+        updatedAt: DateTime.now(),
+        lastMessageContent: message,
+        lastMessageAt: timestamp,
+      );
+
+      await box.put(chatId, updatedRoom.toJson());
+      print('✅ Updated last message for room: $chatId');
+    }
+  }
+
+  /// Save/update a chat room
+  Future<void> saveChatRoom(ChatRoom room) async {
+    final box = await _openBox();
+    await box.put(room.id, room.toJson());
+    print('💾 Saved chat room: ${room.id}');
+  }
+
+  /// Delete a chat room
+  Future<void> deleteChatRoom(String chatId) async {
+    final box = await _openBox();
+    await box.delete(chatId);
+    print('🗑️ Deleted chat room: $chatId');
+  }
+
+  /// Print all chat rooms (for debugging)
   Future<void> printAllChatRooms() async {
     final box = await _openBox();
     if (box.isEmpty) {
@@ -65,19 +130,29 @@ class HiveChatRoomService {
     }
 
     print('📦 All chat rooms in Hive ($boxName):');
-    for (var room in box.values) {
-      final chatRoom = ChatRoomModel.fromMap(Map<String, dynamic>.from(room));
-      print('🆔 ID: ${chatRoom.id}');
-      print('Type: ${chatRoom.type}');
-      print('Name: ${chatRoom.name ?? "N/A"}');
-      print('Participants: ${chatRoom.participantIds}');
-      print('Created At: ${chatRoom.createdAt}');
+    for (var roomData in box.values) {
+      final room = ChatRoom.fromJson(Map<String, dynamic>.from(roomData));
+      print('🆔 ID: ${room.id}');
+      print('👤 Participant 1: ${room.participant1Id}');
+      print('👤 Participant 2: ${room.participant2Id}');
+      print('💬 Last Message: ${room.lastMessageContent ?? "N/A"}');
+      print('🕐 Last Message At: ${room.lastMessageAt ?? "N/A"}');
+      print('📅 Created: ${room.createdAt}');
+      print('📅 Updated: ${room.updatedAt}');
       print('------------------------');
     }
   }
+
+  /// Clear all chat rooms (for testing)
   Future<void> clearAllChatRooms() async {
     final box = await _openBox();
     await box.clear();
     print('🧹 All chat rooms cleared from Hive ($boxName)');
+  }
+
+  /// Get count of chat rooms
+  Future<int> getChatRoomCount() async {
+    final box = await _openBox();
+    return box.length;
   }
 }

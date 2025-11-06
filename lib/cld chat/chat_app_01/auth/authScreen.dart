@@ -114,7 +114,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     setState(() => _isLoading = true);
 
-    final authService = Provider.of<AuthSyncService>(context, listen: false); // ✅ use new service
+    final authService = Provider.of<AuthSyncService>(context, listen: false);
     String? error;
 
     if (_isLogin) {
@@ -122,9 +122,8 @@ class _AuthScreenState extends State<AuthScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      if(error==null){
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MainScreen()));
-      }
+      final newUserId = Provider.of<AuthSyncService>(context, listen: false).getUserId();
+
     } else {
       error = await authService.syncSignUp(
         email: _emailController.text.trim(),
@@ -132,19 +131,32 @@ class _AuthScreenState extends State<AuthScreen> {
         displayName: _displayNameController.text.trim(),
         profileImage: _selectedImage,
       );
-      if(error==null){
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MainScreen()));
-      }
+      final newUserId = Provider.of<AuthSyncService>(context, listen: false).getUserId();
+
     }
 
     setState(() => _isLoading = false);
 
     if (error != null) {
+      // ❌ Error occurred
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error)),
       );
     } else {
-      Navigator.pushReplacementNamed(context, '/mainScreen');
+      // ✅ Success - verify before navigating
+      final authService2 = Provider.of<AuthSyncService>(context, listen: false);
+      final currentUser = authService2.getCurrentUser();
+
+      if (currentUser != null) {
+        print('✅ Navigation: User confirmed: ${currentUser.email}');
+        Navigator.pushReplacementNamed(context, '/mainScreen');
+      } else {
+        print('❌ Navigation failed: User is null');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User data not found. Please try again.')),
+        );
+      }
     }
   }
+
 }

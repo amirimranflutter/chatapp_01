@@ -1,7 +1,8 @@
+import 'package:chat_app_cld/cld%20chat/chat_app_01/AuthServices/authSyncService.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 final _supabase=Supabase.instance.client;
-final currentUserId=_supabase.auth.currentUser!.id;
+final currentUser=AuthSyncService().getCurrentUser();
 class DateUtilities {
   static String formatMessageTime(DateTime dateTime) {
     final now = DateTime.now();
@@ -50,7 +51,7 @@ class DateUtilities {
           .from('profiles')
           .select('id, display_name, email, avatar_url')
           .or('display_name.ilike.%$query%,email.ilike.%$query%')
-          .neq('id', currentUserId)
+          .neq('id', currentUser!.id)
           .limit(10);
 
       return response;
